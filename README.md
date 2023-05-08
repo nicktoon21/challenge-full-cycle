@@ -13,6 +13,6 @@ $ cd server/
 $ go run server.go
 
 #Em um novo terminal, acesse a pasta client e execute o client.go
-$ cd server/
+$ cd client/
 $ go run client.go
 ```
