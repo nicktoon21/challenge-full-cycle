@@ -6,7 +6,7 @@
 
 ```bash
 #Clone o repositório
-$ git clone https://github.com/nicktoon21/<repository>
+$ git clone https://github.com/nicktoon21/challenge-full-cycle.git
 
 #acesse a pasta server e execute o server.go
 $ cd server/
