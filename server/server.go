@@ -35,7 +35,7 @@ type ResponseCotacao struct {
 
 func getDolar() (*ResponseAPI, error) {
 	ctx := context.Background()
-	ctx, cancel := context.WithTimeout(ctx, time.Millisecond* 200)
+	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*200)
 	defer cancel()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", "https://economia.awesomeapi.com.br/json/last/USD-BRL", nil)
@@ -69,7 +69,7 @@ func getCotacao(w http.ResponseWriter, _ *http.Request) {
 	if err != nil {
 		panic(err)
 	}
-	
+
 	//insere no banco de dados
 	insertdb(cotacao)
 
@@ -85,57 +85,65 @@ func getCotacao(w http.ResponseWriter, _ *http.Request) {
 }
 
 func insertdb(data *ResponseAPI) error {
+
 	db, err := sql.Open("sqlite3", "./database.db")
-	if err!= nil {
-    return err
-  }
+	if err != nil {
+		return err
+	}
 	defer db.Close()
 
-	stmt, err := db.Prepare(`INSERT INTO cotacoes (cotacao) VALUE (?)`)
-	if err!= nil {
+	println(data.USDBRL.Bid)
+
+	stmt, err := db.Prepare(`INSERT INTO cotacoes (cotacao) VALUES (?)`)
+	if err != nil {
 		return err
-  }
+	}
 	defer stmt.Close()
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*10)
-	defer cancel()
-
-	_, err = stmt.ExecContext(ctx, data.USDBRL.Bid)
+	_, err = stmt.ExecContext(ctx, string(data.USDBRL.Bid))
 	if err != nil {
 		return err
 	}
+
+	defer cancel()
+
 	return nil
 
 }
 
 func main() {
-	f, err := os.Create("database.db")
-	if err != nil {
-		log.Fatal(err.Error())
-	}
-	f.Close()
-	db, err := sql.Open("sqlite3", "./database.db")
-	if err!= nil {
-    log.Fatal(err.Error())
-  }
-	defer db.Close()
+	var f *os.File
+	_, err := os.Stat("./database.db")
+	println(!os.IsNotExist(err))
+	if !os.IsNotExist(err) {
+		f, err = os.Create("database.db")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		defer f.Close()
+		db, err := sql.Open("sqlite3", "./database.db")
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		defer db.Close()
 
-	stmt, err := db.Prepare(`
+		stmt, err := db.Prepare(`
 	CREATE TABLE cotacoes(
 		id INTEGER PRIMARY KEY AUTOINCREMENT,
-		cotacao VARCHAR(4)
+		cotacao VARCHAR(10)
 	);
 	`)
-	if err!= nil {
-    log.Fatal(err.Error())
-  }
-	defer stmt.Close()
-
-	_, err = stmt.Exec()
-	if err!= nil {
-    log.Fatal(err.Error())
-  }
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+		defer stmt.Close()
+		_, err = stmt.Exec()
+		if err != nil {
+			log.Fatal(err.Error())
+		}
+	}
 
 	http.HandleFunc("/cotacao", getCotacao)
 	http.ListenAndServe(":8080", nil)
