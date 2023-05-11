@@ -71,7 +71,10 @@ func getCotacao(w http.ResponseWriter, _ *http.Request) {
 	}
 
 	//insere no banco de dados
-	insertdb(cotacao)
+	err = insertdb(cotacao)
+	if err != nil {
+		panic(err)
+	}
 
 	//Monta o resposta da requisicao
 	response := ResponseCotacao{cotacao.USDBRL.Bid}
@@ -92,8 +95,6 @@ func insertdb(data *ResponseAPI) error {
 	}
 	defer db.Close()
 
-	println(data.USDBRL.Bid)
-
 	stmt, err := db.Prepare(`INSERT INTO cotacoes (cotacao) VALUES (?)`)
 	if err != nil {
 		return err
@@ -102,12 +103,13 @@ func insertdb(data *ResponseAPI) error {
 
 	ctx := context.Background()
 	ctx, cancel := context.WithTimeout(ctx, time.Millisecond*10)
+	defer cancel()
+
 	_, err = stmt.ExecContext(ctx, string(data.USDBRL.Bid))
 	if err != nil {
+		log.Printf("Error: %v", err)
 		return err
 	}
-
-	defer cancel()
 
 	return nil
 
@@ -116,7 +118,6 @@ func insertdb(data *ResponseAPI) error {
 func main() {
 	var f *os.File
 	_, err := os.Stat("./database.db")
-	println(!os.IsNotExist(err))
 	if !os.IsNotExist(err) {
 		f, err = os.Create("database.db")
 		if err != nil {
